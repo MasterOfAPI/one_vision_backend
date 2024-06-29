@@ -4,6 +4,9 @@ import requests
 import uuid
 import base64
 from urllib import parse
+from Epson_Print import authenticate, create_print_job, execute_print, upload_print_file
+from check_status import check_translation_status
+from down_transfile import download_translated_document
 from flask import Flask, json, request, jsonify, render_template_string
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 from pdf2image import convert_from_path
@@ -61,24 +64,25 @@ def process_scan_translate_print():
 # Function to call Papago API for document translation
 def translate_document(file_path):
     with open(file_path, 'rb') as file:
+        
         data = {
             'source': 'ko',  # Source language (English)
             'target': TARGET_LANG,
             'file': (file_path, file, 'application/octet-stream', {'Content-Transfer-Encoding': 'binary'})
         }
+        
         m = MultipartEncoder(data, boundary=uuid.uuid4())
+        
         headers = {
             "Content-Type": m.content_type,
             "X-NCP-APIGW-API-KEY-ID": API_KEY_ID,
             "X-NCP-APIGW-API-KEY": API_KEY
         }
+
         response = requests.post("https://naveropenapi.apigw.ntruss.com/doc-trans/v1/translate", headers=headers, data=m.to_string())
 
         if response.status_code == 200:
-            translated_pdf_path = os.path.join(UPLOAD_FOLDER, f'translated_{os.path.basename(file_path)}')
-            with open(translated_pdf_path, 'wb') as f:
-                f.write(response.content)
-            return translated_pdf_path
+            return response.text
         else:
             raise Exception(f"Papago API request failed with status code {response.status_code}: {response.text}")
 
@@ -125,6 +129,81 @@ def authenticate_and_get_token():
     else:
         raise Exception(f"Epson API authentication failed with status code {response.status_code}: {response.text}")
 
+#@Author KBS
+#@DESC 공장장의 매운맛을 보여주마
+@app.route('/trans/document', methods=['POST'])
+def postTranslateDocument():
+    
+    try:
+        # Step 1: Scan document and upload to local server
+        scan_file = request.files['file']
+        if scan_file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        scan_file_path = os.path.join(SCAN_UPLOAD_FOLDER, scan_file.filename)
+        scan_file.save(scan_file_path)
+
+    except Exception as e:
+        print(e)
+        return jsonify({'error': str(e)}), 500
+    
+    try :
+        # Step 2: Call Papago API for document translation
+        requestJson = translate_document(scan_file_path)
+        data = json.loads(requestJson)
+        requestID = data["data"]["requestId"]
+
+        if (requestID == "" or requestID == None) :
+            return jsonify({'error': str(e)}), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+    return jsonify({"id" : requestID}), 200
+
+#@Author KBS
+#@DESC 공장장의 매운맛을 보여주마 2
+@app.route('/trans/document', methods=['GET'])
+def getTranslateResult() : 
+
+    args = request.args
+    requestId = args.get("request", default="", type=str)
+
+    if (requestId == "") :
+        return jsonify({"status" : "fail"}), 404
+    
+    result = check_translation_status("https://naveropenapi.apigw.ntruss.com/doc-trans/v1", API_KEY_ID, API_KEY, requestId)
+    
+    status = result["data"]["status"]
+    percent = result["data"]["progressPercent"]
+
+    if (status == "COMPLETE") :
+        
+        download_translated_document("https://naveropenapi.apigw.ntruss.com/doc-trans/v1", API_KEY_ID, API_KEY, requestId, '/Users/yoon/Desktop/one_vision_backend/translated_document.pdf')
+
+        # 프린터 인증 시작
+        auth_response = authenticate()
+        if not auth_response:
+            return jsonify({"status" : "fail"}), 417
+
+        subject_id = auth_response.get('subject_id')
+        access_token = auth_response.get('access_token')
+        job_response = create_print_job(access_token, subject_id)
+        
+        if not job_response:
+            return jsonify({"status" : "fail"}), 417
+
+        job_id = job_response.get('id')
+        upload_uri = job_response.get('upload_uri')
+        upload_print_file(upload_uri, '/Users/yoon/Desktop/one_vision_backend/translated_document.pdf')
+        execute_print(access_token, subject_id, job_id)
+
+        return jsonify({"status" : "success"}), 200
+
+    elif (status == "WAITING" or status == "PROGRESS"):
+        return jsonify({"status" : "PROGRESS", "percent" : percent}), 200
+    else :
+        return jsonify({"status" : "fail"}), 417
+    
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)

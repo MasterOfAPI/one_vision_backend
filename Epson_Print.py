@@ -137,7 +137,7 @@ def main():
     job_id = job_response.get('id')
     upload_uri = job_response.get('upload_uri')
 
-    local_file_path = r'C:\OneVision\backend\translated_document.pdf'
+    local_file_path = r'C:\OneVision\Desktop\one_vision_backend\translated_document.pdf'
     if not upload_print_file(upload_uri, local_file_path):
         logger.error("Failed to upload print file")
         sys.exit(1)
