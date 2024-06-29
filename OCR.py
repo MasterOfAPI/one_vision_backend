@@ -1,5 +1,3 @@
-# 파파고 API 문서번역
-
 import requests
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 import uuid
@@ -32,7 +30,7 @@ def translate_document(api_url, api_key_id, api_key, file_path, source_lang='en'
 api_url = "https://naveropenapi.apigw.ntruss.com/doc-trans/v1/translate"
 api_key_id = "h9r6m27w0d"
 api_key = "7PbdD8RtQR0AyEwsp11tvqjazukN33AfAePbhuAa"
-file_path = '/Users/yoon/Downloads/backend/visa_document.pdf' # Check Your Path
+file_path = '/Users/yoon/Downloads/backend/visa_document.pdf'
 
 # Example usage
 try:
@@ -40,4 +38,3 @@ try:
     print(translated_text)
 except Exception as e:
     print(e)
-

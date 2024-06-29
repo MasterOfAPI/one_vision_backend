@@ -1,5 +1,3 @@
-# 파파고 API 번역 진행 상태 확인
-
 import requests
 
 def check_translation_status(api_url, api_key_id, api_key, request_id):
@@ -20,7 +18,7 @@ def check_translation_status(api_url, api_key_id, api_key, request_id):
 api_url = "https://naveropenapi.apigw.ntruss.com/doc-trans/v1"
 api_key_id = "h9r6m27w0d"
 api_key = "7PbdD8RtQR0AyEwsp11tvqjazukN33AfAePbhuAa"
-request_id = '20240620_1718890845654_074'
+request_id = '20240622_1719023064531_041'
 
 try:
     status = check_translation_status(api_url, api_key_id, api_key, request_id)

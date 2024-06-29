@@ -1,8 +1,6 @@
-# PDF를 이미지로 변환 후 텍스트 추출 (정확도 떨어짐 기획 그 자체의 변경이 필요할 수도 있음)
-
 import pytesseract
 from PIL import Image
-from pdf2image import convert_from_path # Install Only (myenv), Do not Local Setting
+from pdf2image import convert_from_path
 
 # Define the path to the PDF
 pdf_path = '/Users/yoon/Downloads/backend/translated_document.pdf'

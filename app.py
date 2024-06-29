@@ -1,9 +1,10 @@
 import os
+import time
 import requests
 import uuid
 import base64
 from urllib import parse
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, json, request, jsonify, render_template_string
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 from pdf2image import convert_from_path
 
@@ -25,9 +26,9 @@ DEVICE = 'masterofapi@print.epsonconnect.com'
 
 # Papago API configuration
 PAPAGO_API_URL = "https://naveropenapi.apigw.ntruss.com/doc-trans/v1"
-API_KEY_ID = "h9r6m27w0d"
-API_KEY = "7PbdD8RtQR0AyEwsp11tvqjazukN33AfAePbhuAa"
-TARGET_LANG = 'ko'  # Target language for translation
+API_KEY_ID = "z4rq4ov19l"
+API_KEY = "FRhyAL1AvbHmlwiym6iQbcWIWv8usIv1odPwryAN"
+TARGET_LANG = 'en'  # Target language for translation
 
 # Route to handle file uploads, scanning, translation, and printing
 @app.route('/process_scan_translate_print', methods=['POST'])
@@ -43,6 +44,8 @@ def process_scan_translate_print():
         # Step 2: Call Papago API for document translation
         translated_pdf_path = translate_document(scan_file_path)
 
+        time.sleep(20)
+
         # Step 3: Print translated PDF using Epson Print API
         print_job_status = print_document(translated_pdf_path)
 
@@ -52,13 +55,14 @@ def process_scan_translate_print():
         }), 200
 
     except Exception as e:
+        print(e)
         return jsonify({'error': str(e)}), 500
 
 # Function to call Papago API for document translation
 def translate_document(file_path):
     with open(file_path, 'rb') as file:
         data = {
-            'source': 'en',  # Source language (English)
+            'source': 'ko',  # Source language (English)
             'target': TARGET_LANG,
             'file': (file_path, file, 'application/octet-stream', {'Content-Transfer-Encoding': 'binary'})
         }
@@ -68,7 +72,7 @@ def translate_document(file_path):
             "X-NCP-APIGW-API-KEY-ID": API_KEY_ID,
             "X-NCP-APIGW-API-KEY": API_KEY
         }
-        response = requests.post(f"{PAPAGO_API_URL}/translate", headers=headers, data=m.to_string())
+        response = requests.post("https://naveropenapi.apigw.ntruss.com/doc-trans/v1/translate", headers=headers, data=m.to_string())
 
         if response.status_code == 200:
             translated_pdf_path = os.path.join(UPLOAD_FOLDER, f'translated_{os.path.basename(file_path)}')
@@ -121,6 +125,7 @@ def authenticate_and_get_token():
     else:
         raise Exception(f"Epson API authentication failed with status code {response.status_code}: {response.text}")
 
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5001)
 
